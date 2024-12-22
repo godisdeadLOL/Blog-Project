@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import select
 
 from database import get_session
 from dependencies import get_current_user, get_current_user_or_none
