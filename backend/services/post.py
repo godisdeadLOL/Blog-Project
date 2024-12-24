@@ -66,38 +66,3 @@ async def get_post_by_query(session: AsyncSession, user_public: UserPublic, wher
     if len(posts_public) == 0:
         return None
     return posts_public[0]
-
-
-async def post_exists(session: AsyncSession, post_id: int) -> bool:
-    query = select(Post).where(Post.id == post_id)
-    post = (await session.execute(query)).scalar_one_or_none()
-
-    return post != None
-
-
-async def create_post(session: AsyncSession, post_create: PostCreate, user_public: UserPublic):
-    post = Post(**post_create.model_dump(), user_id=user_public.id)
-
-    session.add(post)
-    await session.commit()
-    await session.refresh(post)
-
-    return post
-
-
-async def update_post(session: AsyncSession, post_id: int, post_update: PostUpdate):
-    query = select(Post).where(Post.id == post_id)
-    post = (await session.execute(query)).scalar_one()
-
-    update_fields(post, post_update)
-
-    await session.commit()
-    await session.refresh(post)
-
-    return post
-
-
-async def delete_post(session: AsyncSession, post_id: int):
-    query = delete(Post).where(Post.id == post_id)
-    await session.execute(query)
-    await session.commit()

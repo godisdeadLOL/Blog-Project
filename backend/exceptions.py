@@ -18,8 +18,8 @@ class NoCommentException (HTTPException) :
         
 class WrongAccessException (HTTPException) :
     def __init__(self) :
-        super().__init__(status_code=404, detail="wrong_access")
+        super().__init__(status_code=403, detail="wrong_access")
         
 class UserBlockedException(HTTPException) :
     def __init__(self) :
-        super().__init__(status_code=4043, detail="user_blocked")
+        super().__init__(status_code=403, detail="user_blocked")

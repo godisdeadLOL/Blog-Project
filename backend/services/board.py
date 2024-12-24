@@ -18,17 +18,9 @@ async def get_boards_by_query(session: AsyncSession, user_public: UserPublic, wh
     query = (
         select(Board, Role.level, func.count(Post.id), func.count(Ban.id))
         .where(where)
-        .join(
-            Role,
-            (Role.board_id == Board.id) & (Role.user_id == (user_public.id if user_public != None else -1)),
-            isouter=True,
-        )
-        .join(
-            Ban,
-            (Ban.board_id == Board.id) & (Role.user_id == user_id),
-            isouter=True,
-        )
-        .join(Post, Post.board_id == Board.id)
+        .join(Role, (Role.board_id == Board.id) & (Role.user_id == user_id), isouter=True)
+        .join(Ban, (Ban.board_id == Board.id) & (Role.user_id == user_id), isouter=True)
+        .join(Post, Post.board_id == Board.id, isouter=True)
         .group_by(Board.id, Role.id)
     )
 
@@ -61,42 +53,3 @@ async def get_board_by_query(session: AsyncSession, user_public: UserPublic, whe
         return None
 
     return posts[0]
-
-
-async def board_exists(session: AsyncSession, board_id: int) -> bool:
-    query = select(Board).where(Board.id == board_id)
-    board = (await session.execute(query)).scalar_one_or_none()
-
-    return board != None
-
-
-async def create_board(session: AsyncSession, board_create: BoardCreate, user_id: int):
-    board = Board(**board_create.model_dump())
-
-    session.add(board)
-    await session.commit()
-
-    # todo: создавать первую роль в controller
-    role = Role(user_id=user_id, board_id=board.id, level=RoleLevel.owner)
-    session.add(role)
-    await session.commit()
-
-    return board
-
-
-async def update_board(session: AsyncSession, board_id: int, board_update: BoardUpdate):
-    query = select(Board).where(Board.id == board_id)
-    board = (await session.execute(query)).scalar_one()
-
-    update_fields(board, board_update)
-
-    await session.commit()
-    await session.refresh(board)
-
-    return board
-
-
-async def delete_board(session: AsyncSession, board_id: int):
-    query = delete(Board).where(Board.id == board_id)
-    await session.execute(query)
-    await session.commit()

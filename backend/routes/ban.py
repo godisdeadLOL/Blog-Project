@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from sqlalchemy import select
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_session
 
@@ -14,6 +12,7 @@ from schemas.user import UserPublic
 
 import services.board as board_service
 import services.user as user_service
+import services.core as core_service
 
 router = APIRouter()
 
@@ -24,34 +23,23 @@ async def create_ban(
     user_public: UserPublic = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    board_public = await board_service.get_board_by_query(
-        session, user_public, Board.id == ban_create.board_id
-    )
-
-    if not board_public:
+    if not await core_service.model_exists(session, Board, ban_create.board_id):
         raise NoBoardException()
 
-    target_user_public = await user_service.get_user_by_query(session, User.id == ban_create.user_id)
-
-    if not target_user_public:
+    if not await core_service.model_exists(session, User, ban_create.user_id):
         raise NoUserException()
 
-    target_board_public = await board_service.get_board_by_query(
-        session, target_user_public, Board.id == ban_create.board_id
+    user_access_level = await core_service.get_access_level(
+        session, Board, model_id=ban_create.board_id, user_public=user_public
     )
 
-    assert target_board_public != None
+    target_access_level = await core_service.get_access_level(
+        session, Board, model_id=ban_create.board_id, user_id=ban_create.user_id
+    )
 
-    if not (
-        board_public.access_level >= RoleLevel.moderator
-        and board_public.access_level.value > target_board_public.access_level.value
-    ):
+    if not (target_access_level > user_access_level and user_access_level >= RoleLevel.moderator):
         raise WrongAccessException()
 
-    ban = Ban(**ban_create.model_dump())
-
-    session.add(ban)
-    await session.commit()
-    await session.refresh(ban)
+    ban = await core_service.create_model(session, Ban, ban_create)
 
     return ban

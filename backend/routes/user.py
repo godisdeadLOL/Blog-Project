@@ -16,17 +16,17 @@ import services.board as board_service
 router = APIRouter()
 
 
-@router.get("/board", response_model=list[UserBoard])
-async def get_users_by_board_id(board_id: int, session: AsyncSession = Depends(get_session)):
+# @router.get("/board", response_model=list[UserBoard])
+# async def get_users_by_board_id(board_id: int, session: AsyncSession = Depends(get_session)):
     
-    if not await board_service.board_exists(session, board_id) :
-        raise NoBoardException()
+#     if not await board_service.board_exists(session, board_id) :
+#         raise NoBoardException()
     
-    query = select(Role).where(Role.board_id == board_id).options(joinedload(Role.user))
-    roles = (await session.execute(query)).unique().scalars()
+#     query = select(Role).where(Role.board_id == board_id).options(joinedload(Role.user))
+#     roles = (await session.execute(query)).unique().scalars()
 
-    users_board = [UserBoard(**vars(role.user), role_level=role.level) for role in roles]
-    return users_board
+#     users_board = [UserBoard(**vars(role.user), role_level=role.level) for role in roles]
+#     return users_board
 
 
 @router.put("/{user_id}")

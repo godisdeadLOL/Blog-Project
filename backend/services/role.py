@@ -33,3 +33,11 @@ async def get_roles_by_query(session: AsyncSession, user_public: UserPublic, whe
         roles_public.append(role_public)
 
     return roles_public
+
+async def get_role_by_query(session: AsyncSession, user_public: UserPublic, where) -> RolePublic | None:
+    roles = await get_roles_by_query(session, user_public, where)
+
+    if len(roles) == 0:
+        return None
+
+    return roles[0]

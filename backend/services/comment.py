@@ -63,38 +63,3 @@ async def get_comment_by_query(session: AsyncSession, user_public: UserPublic, w
     if len(comments_public) == 0:
         return None
     return comments_public[0]
-
-
-async def comment_exists(session: AsyncSession, comment_id: int) -> bool:
-    query = select(Comment).where(Comment.id == comment_id)
-    comment = (await session.execute(query)).scalar_one_or_none()
-
-    return comment != None
-
-
-async def create_comment(session: AsyncSession, comment_create: CommentCreate, user_public: UserPublic):
-    post = Comment(**comment_create.model_dump(), user_id=user_public.id)
-
-    session.add(post)
-    await session.commit()
-    await session.refresh(post)
-
-    return post
-
-
-async def update_comment(session: AsyncSession, comment_id: int, post_update: CommentUpdate):
-    query = select(Post).where(Comment.id == comment_id)
-    post = (await session.execute(query)).scalar_one()
-
-    update_fields(post, post_update)
-
-    await session.commit()
-    await session.refresh(post)
-
-    return post
-
-
-async def delete_comment(session: AsyncSession, comment_id: int):
-    query = delete(Comment).where(Comment.id == comment_id)
-    await session.execute(query)
-    await session.commit()

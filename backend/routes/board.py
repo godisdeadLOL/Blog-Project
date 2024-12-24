@@ -10,6 +10,7 @@ from schemas.user import UserPublic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import services.board as board_service
+import services.core as core_service
 
 router = APIRouter()
 
@@ -22,6 +23,19 @@ async def get_all_boards(
     boards_public = await board_service.get_boards_by_query(session, user_public, True)
     return boards_public
 
+@router.get("/{board_id}", response_model=BoardPublic)
+async def get_board_by_id(
+    board_id: int,
+    user_public: UserPublic = Depends(dependency=get_current_user_or_none),
+    session: AsyncSession = Depends(get_session),
+):
+    board_public = await board_service.get_board_by_query(session, user_public, Board.id == board_id)
+    
+    if not board_public :
+        raise NoBoardException()
+    
+    return board_public
+
 
 @router.post("/", response_model=BoardPublic)
 async def create_board(
@@ -29,9 +43,14 @@ async def create_board(
     user_public: UserPublic = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    board = await board_service.create_board(session, board_create, user_public.id)
+    board: Board = await core_service.create_model(session, Board, board_create)
+
+    await core_service.create_model(
+        session, Role, user_id=user_public.id, board_id=board.id, level=RoleLevel.owner
+    )
 
     board_public = await board_service.get_board_by_query(session, user_public, Board.id == board.id)
+    
     return board_public
 
 
@@ -47,13 +66,14 @@ async def update_board(
     if not board_public:
         raise NoBoardException()
 
-    if board_public.access_level != RoleLevel.owner:
+    if not board_public.access_level == RoleLevel.owner:
         raise WrongAccessException()
 
-    await board_service.update_board(session, board_id, board_update)
+    await core_service.update_model(session, Board, board_id, board_update)
 
     board_public = await board_service.get_board_by_query(session, user_public, Board.id == board_id)
     return board_public
+
 
 @router.delete("/{board_id}")
 async def delete_board(
@@ -66,9 +86,9 @@ async def delete_board(
     if not board_public:
         raise NoBoardException()
 
-    if board_public.access_level != RoleLevel.owner:
+    if not board_public.access_level == RoleLevel.owner:
         raise WrongAccessException()
 
-    await board_service.delete_board(session, board_id)
+    await core_service.delete_model(session, Board, board_id)
 
     return None

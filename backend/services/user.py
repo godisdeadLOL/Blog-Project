@@ -9,10 +9,3 @@ async def get_user_by_query(session: AsyncSession, where):
     user = (await session.execute(query)).scalar_one_or_none()
 
     return user
-
-
-async def user_exists(session: AsyncSession, user_id : int) :
-    query = select(User).where(User.id == user_id)
-    user = (await session.execute(query)).scalar_one_or_none()
-
-    return user != None

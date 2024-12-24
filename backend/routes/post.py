@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
@@ -13,7 +12,6 @@ from schemas.user import UserPublic
 
 import services.post as post_service
 import services.board as board_service
-
 import services.core as core_service
 
 router = APIRouter()
@@ -33,7 +31,8 @@ async def get_posts_by_user_id(
     user_public: UserPublic = Depends(get_current_user_or_none),
     session: AsyncSession = Depends(get_session),
 ):
-    # todo: check user not exists
+    if not core_service.model_exists(session, User, user_id):
+        raise NoBoardException()
 
     posts_public = await post_service.get_posts_by_query(session, user_public, Post.user_id == user_id)
     return posts_public
@@ -45,7 +44,7 @@ async def get_posts_by_board_id(
     user_public: UserPublic = Depends(get_current_user_or_none),
     session: AsyncSession = Depends(get_session),
 ):
-    if not board_service.board_exists(session, board_id):
+    if not core_service.model_exists(session, Board, board_id):
         raise NoBoardException()
 
     posts_public = await post_service.get_posts_by_query(session, user_public, Post.board_id == board_id)
@@ -59,13 +58,14 @@ async def get_post_by_id(
     session: AsyncSession = Depends(get_session),
 ):
     post_public = await post_service.get_post_by_query(session, user_public, Post.id == post_id)
-    
-    # access_level = await core_service.get_access_level(session, Post, model_id=post_id)
-    # print(access_level)
 
     if not post_public:
         raise NoPostException()
-
+    
+    print("check access level")
+    access_level = await core_service.get_access_level(session, Post, model_id=post_id, user_public=user_public)
+    print("Post access level:", access_level)
+    
     return post_public
 
 
@@ -85,7 +85,7 @@ async def create_post(
     if not board_public.access_level.value >= RoleLevel.creator.value:
         raise WrongAccessException()
 
-    post = await post_service.create_post(session, post_create, user_public)
+    post = await core_service.create_model(session, Post, post_create, user_id=user_public.id)
 
     post_public = await post_service.get_post_by_query(session, user_public, Post.id == post.id)
     return post_public
@@ -106,7 +106,7 @@ async def update_post(
     if not post_public.access_level.value >= RoleLevel.moderator.value:
         raise WrongAccessException()
 
-    await post_service.update_post(session, post_id, post_update)
+    await core_service.update_model(session, Post, post_id, post_update)
 
     post_public = await post_service.get_post_by_query(session, user_public, Post.id == post_id)
     return post_public
@@ -126,6 +126,6 @@ async def delete_post(
     if not post_public.access_level.value >= RoleLevel.admin.value:
         raise WrongAccessException()
 
-    await post_service.delete_post(session, post_id)
+    await core_service.delete_model(session, Post, post_id)
 
     return None

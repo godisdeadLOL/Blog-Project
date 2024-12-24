@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from database import get_session
 from dependencies import get_current_user, get_current_user_or_none
@@ -12,6 +11,7 @@ from schemas.user import UserPublic
 
 import services.comment as comment_service
 import services.post as post_service
+import services.core as core_service
 
 router = APIRouter()
 
@@ -51,7 +51,10 @@ async def get_comment_by_id(
     user_public: UserPublic = Depends(get_current_user_or_none),
     session: AsyncSession = Depends(get_session),
 ):
-    comment_public = await comment_service.get_comment_by_query(session, user_public, Comment.id == comment_id)
+    print("getting comment data")
+    comment_public = await comment_service.get_comment_by_query(
+        session, user_public, Comment.id == comment_id
+    )
 
     if not comment_public:
         raise NoCommentException()
@@ -72,7 +75,7 @@ async def create_comment(
     if not post_public:
         raise NoPostException()
 
-    comment = await comment_service.create_comment(session, comment_create, user_public)
+    comment = await core_service.create_model(session, Comment, comment_create, user_id=user_public.id)
 
     comment_public = await comment_service.get_comment_by_query(
         session, user_public, Comment.id == comment.id

@@ -108,11 +108,6 @@ usernames = [
 
 base_url = "http://127.0.0.1:5000"
 
-
-print(User is User)
-
-quit()
-
 # create users
 user_amount = 24
 

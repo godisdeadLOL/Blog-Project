@@ -13,7 +13,7 @@ url = f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 
 Base = declarative_base()
 
-engine = create_async_engine(url, echo=False)
+engine = create_async_engine(url, echo=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
